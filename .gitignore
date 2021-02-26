@@ -1,0 +1,4 @@
+*.jpg
+*.txt
+*.mp4
+/vscode/*
