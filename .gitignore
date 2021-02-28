@@ -1,5 +1,5 @@
 *.jpg
 *.txt
 *.mp4
-/vscode/*
+.vscode/*
 __pycache__/*
