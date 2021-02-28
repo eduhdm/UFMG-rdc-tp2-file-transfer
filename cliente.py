@@ -19,17 +19,21 @@ socket_udp = socket.socket(address_family, socket.SOCK_DGRAM)
 
 f = open(file_name, "rb")
 
+# Enviar mensagem do tipo file (headers + dado)
 def send_package(data, index, udp_port):
     socket_udp.sendto(msg_types["file"].encode('utf-8'), (host, udp_port))
     socket_udp.sendto(str(index).encode('utf-8'), (host, udp_port))
     socket_udp.sendto(str(BUFSIZE_FILE_SLICE).encode('utf-8'), (host, udp_port))
     socket_udp.sendto(data, (host, udp_port))
 
-
+# Recebe uma porta udp retornada pelo sevidor
+# Envia 4 pacotes (window size) e a partir disso começa a esperar o retorno
+# ack do servidor para enviar mais pacotes (janela deslizante)
 def send_packages_sliding_window(udp_port):
   socket_tcp.settimeout(1)
   send_index=0
   ack_index=-1
+
   while True:
     if(send_index >= WINDOW_SIZE):
       try:
@@ -41,9 +45,11 @@ def send_packages_sliding_window(udp_port):
         if(res[0] == msg_types["fim"]):
           print('Received fim, closing connection...')
           break
+      # Reseta para o próximo pacote que não recebeu ack
       except socket.timeout:
         print('Timeout receiving ack...')
         send_index = ack_index + 1
+        # Volta na posição de leitura do próximo pacote
         f.seek(send_index * BUFSIZE_FILE_SLICE)
 
     data_package = f.read(BUFSIZE_FILE_SLICE)
@@ -56,6 +62,10 @@ def send_hello():
   print('Sending hello')
   send_message(socket_tcp, msg_types["hello"])
 
+# Envia mensagem com informações do arquivo:
+# 1. tipo da mensagem,
+# 2. Nome do arquivo
+# 3. Tamanho do arquivo em bytes
 def send_info_file():
   print('Sending file info')
   msgs = [msg_types["info_file"], file_name, str(os.stat(file_name).st_size)]
@@ -72,6 +82,9 @@ def main():
   except socket.error as e:
     print(str(e))
 
+  # Executa bloco até receber a mensagem to tipo OK
+  # A partir dessa mensagem, a execução é controlada
+  # por send_packages_sliding_window
   while True:
     res = recv_message(socket_tcp)
     if(res[0] == msg_types["init_client"]):

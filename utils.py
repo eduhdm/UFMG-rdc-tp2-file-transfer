@@ -17,9 +17,8 @@ BUFSIZE_TCP = 1024
 BUFSIZE_UDP = 1024
 BUFSIZE_FILE_SLICE = 1024
 
-def recv_message(socket_con):
-  return socket_con.recv(BUFSIZE_TCP).decode('utf-8').split(SEPARATOR)
-
+# Essa função recebe uma mensagem ou uma lista de mensagens
+# e junta elas com o separador "|" em uma string
 def send_message(socket_con, msg):
   payload = msg
   if(isinstance(msg, list)):
@@ -27,6 +26,12 @@ def send_message(socket_con, msg):
 
   return socket_con.send(payload.encode('utf-8'))
 
+# Essa função recebe a string no formato msg1|msg2|msg3 ...
+# e armazena as mensagens em uma lista
+def recv_message(socket_con):
+  return socket_con.recv(BUFSIZE_TCP).decode('utf-8').split(SEPARATOR)
+
+# Valida nome do arquivo
 def is_valid_file(file_name):
   try:
     file_name.encode('ascii')

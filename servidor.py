@@ -11,6 +11,8 @@ host = '::'
 port = int(sys.argv[1])
 udp_port_init = 51512
 
+# Recebe as informações do pacote e o conteúdo do pacote utilizando
+# um socket UDP
 def receive_package(socket_udp):
   _ = socket_udp.recvfrom(BUFSIZE_UDP)[0].decode('utf-8')
   index = socket_udp.recvfrom(BUFSIZE_UDP)[0].decode('utf-8')
@@ -19,11 +21,15 @@ def receive_package(socket_udp):
 
   return int(index), int(payload_size), package_data
 
+# Cria um arquivo para leitura na pasta output e recebe pacotes do cliente
+# utilizando a algoritmo de janela deslizante
 def create_file_receiver(socket_tcp, file_name, file_size, udp_port):
+  # Cria socket com porta designada ao cliente
   socket_udp = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
   socket_udp.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
   socket_udp.bind((host, udp_port))
 
+  # Tenta abrir um arquivo na pasta output ou cria a pasta
   try:
     f = open(f'output/{file_name}', 'wb+')
   except FileNotFoundError:
@@ -34,9 +40,13 @@ def create_file_receiver(socket_tcp, file_name, file_size, udp_port):
   send_index = 0
   ack_index = 0
   payload_size = 0
+  # Recebe pacotes do cliente enquanto o tamanho recebido é menor que o
+  # tamanho total do arquivo
   while (received_size < file_size):
     if(send_index >= WINDOW_SIZE - 1):
       try:
+        # if(random.randint(0, 20) % 3 == 0):
+        #   raise Exception('test connection error')
         send_message(socket_tcp, [msg_types["ack"], str(ack_index)])
         print('Sending ack #', ack_index)
         received_size += payload_size
@@ -54,13 +64,16 @@ def create_file_receiver(socket_tcp, file_name, file_size, udp_port):
   socket_udp.close()
   f.close()
 
-
 def multi_threaded_client(connection, CLIENT_COUNT, udp_port):
+  # Envia mensagem init_client para informar ao cliente que a troca
+  # de mensagem pode ocorrer
   send_message(connection, msg_types["init_client"])
   file_name = ''
   file_size = ''
   udp_port = 0
 
+  # Troca mensagens com o cliente, e para código de mensagem
+  # envia uma mensagem de retorno específico
   while True:
     res = recv_message(connection)
     if(res[0] == msg_types["hello"]):
@@ -82,7 +95,7 @@ def multi_threaded_client(connection, CLIENT_COUNT, udp_port):
 def main():
   udp_port_init = 51512
   CLIENT_COUNT = 0
-
+  # Escuta uma porta recebida por argumento
   try:
     socket_tcp.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     socket_tcp.bind((host, int(port)))
@@ -92,7 +105,7 @@ def main():
   print('Socket is listening..')
   socket_tcp.listen(1)
 
-  print('client_count', CLIENT_COUNT)
+  # Recebe conexões de N clientes e abre uma nova thread para cada cliente
   while True:
     Client, address = socket_tcp.accept()
     print('Connected to: ' + address[0] + ':' + str(address[1]))
