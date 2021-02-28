@@ -2,3 +2,4 @@
 *.txt
 *.mp4
 /vscode/*
+__pycache__/*
