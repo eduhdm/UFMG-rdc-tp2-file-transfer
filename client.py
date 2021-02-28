@@ -9,6 +9,10 @@ host = sys.argv[1]
 tcp_port = int(sys.argv[2])
 file_name = sys.argv[3]
 
+if(not is_valid_file(file_name)):
+  print("Nome não permitido")
+  exit()
+
 address_family = socket.getaddrinfo(host, tcp_port)[0][0]
 socket_tcp = socket.socket(address_family, socket.SOCK_STREAM)
 socket_udp = socket.socket(address_family, socket.SOCK_DGRAM)
@@ -16,8 +20,6 @@ socket_udp = socket.socket(address_family, socket.SOCK_DGRAM)
 f = open(file_name, "rb")
 
 def send_package(data, index, udp_port):
-    # if(random.randint(0, 100) % 50 == 0 and False):
-    #   raise Exception('dsa')
     socket_udp.sendto(msg_types["file"].encode('utf-8'), (host, udp_port))
     socket_udp.sendto(str(index).encode('utf-8'), (host, udp_port))
     socket_udp.sendto(str(BUFSIZE_FILE_SLICE).encode('utf-8'), (host, udp_port))
@@ -35,18 +37,14 @@ def send_packages_sliding_window(udp_port):
 
         if(res[0] == msg_types["ack"]):
           ack_index = int(res[1])
-          print('ack index is', ack_index)
+          print('Received ack #', ack_index)
         if(res[0] == msg_types["fim"]):
           print('Received fim, closing connection...')
           break
       except socket.timeout:
-        print('timeout timeout timeout', ack_index)
-        f.seek((ack_index + 1) * BUFSIZE_FILE_SLICE)
+        print('Timeout receiving ack...')
         send_index = ack_index + 1
-        data_package = f.read(BUFSIZE_FILE_SLICE)
-        send_package(data_package, send_index, udp_port)
-        send_index+=1
-        continue
+        f.seek(send_index * BUFSIZE_FILE_SLICE)
 
     data_package = f.read(BUFSIZE_FILE_SLICE)
     print('Sending package #', send_index)
@@ -64,9 +62,6 @@ def send_info_file():
 
 def main():
   print('Waiting for connection response')
-  if(not is_valid_file(file_name)):
-    print("Nome não permitido")
-    exit()
 
   try:
     if(':' in host):
@@ -78,19 +73,18 @@ def main():
 
   while True:
     res = recv_message(socket_tcp)
-    print('received message ', res)
     if(res[0] == msg_types["init_client"]):
-      print('received init')
+      print('Received init')
       send_hello()
 
     if(res[0] == msg_types["connection"]):
-      print('received connection')
+      print('Received connection, udp port', res[1])
       udp_port = int(res[1])
       print('udp port', udp_port)
       send_info_file()
 
     if(res[0] == msg_types["ok"]):
-      print("received ok")
+      print("Received ok")
       send_packages_sliding_window(udp_port)
       break
 

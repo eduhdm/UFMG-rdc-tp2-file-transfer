@@ -12,7 +12,7 @@ port = int(sys.argv[1])
 udp_port_init = 51512
 
 def receive_package(socket_udp):
-  identifier = socket_udp.recvfrom(BUFSIZE_UDP)[0].decode('utf-8')
+  _ = socket_udp.recvfrom(BUFSIZE_UDP)[0].decode('utf-8')
   index = socket_udp.recvfrom(BUFSIZE_UDP)[0].decode('utf-8')
   payload_size = socket_udp.recvfrom(BUFSIZE_UDP)[0].decode('utf-8')
   package_data = socket_udp.recvfrom(BUFSIZE_UDP)[0]
@@ -23,7 +23,6 @@ def create_file_receiver(socket_tcp, file_name, file_size, udp_port):
   socket_udp = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
   socket_udp.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
   socket_udp.bind((host, udp_port))
-  # socket_udp.settimeout(1)
 
   try:
     f = open(f'output/{file_name}', 'wb+')
@@ -38,21 +37,18 @@ def create_file_receiver(socket_tcp, file_name, file_size, udp_port):
   while (received_size < file_size):
     if(send_index >= WINDOW_SIZE - 1):
       try:
-        print('sending ack', ack_index)
-        if(random.randint(0, 100) % 3 == 0):
-          raise Exception("test")
         send_message(socket_tcp, [msg_types["ack"], str(ack_index)])
+        print('Sending ack #', ack_index)
         received_size += payload_size
         ack_index += 1
       except:
         received_size = ack_index * BUFSIZE_FILE_SLICE
-        print('error', ack_index, received_size)
+        print('Error sending ack', ack_index)
         f.seek(ack_index * BUFSIZE_FILE_SLICE)
 
     send_index, payload_size, package_data = receive_package(socket_udp)
     f.write(package_data)
-    print('Receiving package #', send_index, received_size, file_size)
-    print('data', len(package_data))
+    print('Receiving package #', send_index)
 
   socket_tcp.send(str.encode(msg_types["fim"]))
   socket_udp.close()
@@ -68,12 +64,12 @@ def multi_threaded_client(connection, CLIENT_COUNT, udp_port):
   while True:
     res = recv_message(connection)
     if(res[0] == msg_types["hello"]):
-      print('received hello')
+      print('Received hello')
       udp_port = udp_port_init + CLIENT_COUNT
       send_message(connection, [msg_types["connection"], str(udp_port)])
 
     if(res[0] == msg_types["info_file"]):
-      print('received info_file')
+      print('Received info_file')
       file_name = res[1]
       file_size = res[2]
       send_message(connection, msg_types["ok"])
@@ -108,12 +104,3 @@ def main():
 
 if __name__ == "__main__":
   main()
-
-        # if(random.randint(0, 100) % 50 == 0 and False):
-      #   received_size = ack_index * BUFSIZE_FILE_SLICE
-      #   print('error', ack_index, received_size)
-      #   f.seek(ack_index * BUFSIZE_FILE_SLICE)
-      # else:
-      #   send_message(socket_tcp, [msg_types["ack"], str(ack_index)])
-      #   received_size += payload_size
-      #   ack_index += 1
