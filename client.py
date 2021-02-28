@@ -53,6 +53,7 @@ def send_packages_sliding_window(udp_port):
 
 
 def send_hello():
+  print('Sending hello')
   send_message(socket_tcp, msg_types["hello"])
 
 def send_info_file():
@@ -80,7 +81,6 @@ def main():
     if(res[0] == msg_types["connection"]):
       print('Received connection, udp port', res[1])
       udp_port = int(res[1])
-      print('udp port', udp_port)
       send_info_file()
 
     if(res[0] == msg_types["ok"]):
